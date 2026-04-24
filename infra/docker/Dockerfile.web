@@ -1,0 +1,23 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Enable npm workspaces in alpine
+COPY package.json package-lock.json ./
+COPY apps/web/package.json ./apps/web/
+
+RUN npm install
+
+COPY apps/web ./apps/web
+
+RUN npm run build --workspace=apps/web
+
+FROM nginx:alpine
+
+# Copy built static files to Nginx
+COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
+
+# Expose port (default nginx is 80)
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

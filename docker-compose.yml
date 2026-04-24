@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: mongo:6.0
+    container_name: autoclaw_db
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - autoclaw_mongo_data:/data/db
+    networks:
+      - autoclaw_net
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: autoclaw_api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    environment:
+      - MONGO_URI=${MONGO_URI:-mongodb://db:27017/autoclaw}
+      - LLM_MODEL=${LLM_MODEL:-minimaxai/minimax-m2.7}
+      - USER_EMAIL=${USER_EMAIL}
+      - USER_PASSWORD=${USER_PASSWORD}
+    depends_on:
+      - db
+    networks:
+      - autoclaw_net
+
+  web:
+    build:
+      context: .
+      dockerfile: ./infra/docker/Dockerfile.web
+    container_name: autoclaw_web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-https://autoclaw.rogeliodelarosa.com}
+    depends_on:
+      - api
+    networks:
+      - autoclaw_net
+
+volumes:
+  autoclaw_mongo_data:
+
+networks:
+  autoclaw_net:
+    driver: bridge

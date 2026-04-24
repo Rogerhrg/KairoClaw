@@ -1,0 +1,39 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Enable npm workspaces in alpine
+COPY package.json package-lock.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/core/package.json ./packages/core/
+
+RUN npm install
+
+COPY tsconfig.json ./
+COPY packages/core ./packages/core
+COPY apps/api ./apps/api
+
+# Build typescript
+RUN npm run build --workspace=@autoclaw/core
+RUN npm run build --workspace=api
+
+# Prune dev dependencies if desired, though minimal footprint is mostly achieved already
+# RUN npm prune --production
+
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/packages/core/package.json ./packages/core/
+COPY --from=builder /app/packages/core/dist ./packages/core/dist
+
+EXPOSE 3000
+
+ENV NODE_ENV=production
+
+CMD ["npm", "start", "--workspace=api"]
