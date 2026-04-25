@@ -88,7 +88,7 @@ export default async function (fastify: FastifyInstance) {
         if (botToken) {
           const { getMemory } = await import('../services/memory.js');
           const mem = await getMemory(userId);
-          const current = mem?.preferredModel || process.env.LLM_MODEL || 'moonshotai/kimi-k2.5';
+          const current = mem?.preferredModel || 'moonshotai/kimi-k2.5';
           await sendTelegramMessage(botToken, chatId, `Modelo actual: <b>${escapeHTML(current)}</b>\nPara cambiarlo: <code>/model &lt;nombre&gt;</code>`);
         }
       }

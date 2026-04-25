@@ -28,7 +28,7 @@ import type { CollectionName, EntryPage } from './api/client';
 interface FieldDef {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'textarea' | 'select' | 'datetime-local';
+  type: 'text' | 'number' | 'textarea' | 'select' | 'datetime-local' | 'date';
   options?: string[];
 }
 
@@ -80,7 +80,6 @@ export const COLLECTIONS: CollectionMeta[] = [
         type: 'select',
         options: ['Pendiente', 'En progreso', 'Completada', 'En espera'],
       },
-      { key: 'timestamp', label: 'Fecha', type: 'datetime-local' }
     ],
   },
   {
@@ -180,7 +179,7 @@ export const COLLECTIONS: CollectionMeta[] = [
     titleField: 'entry',
     fields: [
       { key: 'entry', label: 'Entry', type: 'textarea' },
-      { key: 'timestamp', label: 'Fecha y Hora', type: 'datetime-local' }
+      { key: 'timestamp', label: 'Fecha', type: 'date' }
     ],
   },
 ];
@@ -214,6 +213,20 @@ const fmtDate = (val: unknown): string => {
       day: 'numeric',
       timeZone: 'America/Monterrey'
     }));
+  } catch {
+    return String(val);
+  }
+};
+
+const fmtDateShort = (val: unknown): string => {
+  if (!val) return '';
+  try {
+    const d = new Date(val as string);
+    const weekday = d.toLocaleDateString('es-MX', { weekday: 'short', timeZone: 'America/Monterrey' }).replace('.', '');
+    const day = d.toLocaleDateString('es-MX', { day: 'numeric', timeZone: 'America/Monterrey' });
+    const month = d.toLocaleDateString('es-MX', { month: 'long', timeZone: 'America/Monterrey' });
+    const capitalizedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+    return `${capitalizedWeekday} ${day} ${month}`;
   } catch {
     return String(val);
   }
@@ -263,7 +276,7 @@ interface EditPopupProps {
   onDelete: (id: string) => void;
 }
 
-function EditPopup({ meta, entry, token, isNew, onClose, onSaved, onDelete }: EditPopupProps) {
+export function EditPopup({ meta, entry, token, isNew, onClose, onSaved, onDelete }: EditPopupProps) {
   const [financeCategories, setFinanceCategories] = useState<LookupItem[]>([]);
   const [gymExercises, setGymExercises] = useState<LookupItem[]>([]);
   const [form, setForm] = useState<Record<string, unknown>>(() => {
@@ -289,7 +302,12 @@ function EditPopup({ meta, entry, token, isNew, onClose, onSaved, onDelete }: Ed
         }).formatToParts(d);
         
         const getP = (t: string) => mtyParts.find(p => p.type === t)?.value || '';
-        initial[f.key] = `${getP('year')}-${getP('month')}-${getP('day')}T${getP('hour')}:${getP('minute')}`;
+        
+        if (f.type === 'date') {
+          initial[f.key] = `${getP('year')}-${getP('month')}-${getP('day')}`;
+        } else {
+          initial[f.key] = `${getP('year')}-${getP('month')}-${getP('day')}T${getP('hour')}:${getP('minute')}`;
+        }
         return;
       }
       if ((meta.name === 'finance_categories' || meta.name === 'gym_exercises') && f.key === 'keywords') {
@@ -423,8 +441,15 @@ function EditPopup({ meta, entry, token, isNew, onClose, onSaved, onDelete }: Ed
       }
 
       if (normalizedForm.timestamp) {
-        // Enforce parsing as Monterrey time (-06:00)
-        normalizedForm.timestamp = new Date(`${normalizedForm.timestamp}:00-06:00`).toISOString();
+        if (meta.name === 'journal') {
+          // Round to 12:00 AM Monterrey time
+          normalizedForm.timestamp = new Date(`${normalizedForm.timestamp}T00:00:00-06:00`).toISOString();
+        } else {
+          const ts = String(normalizedForm.timestamp);
+          // If it's just a date (no T), assume 12:00 AM for safety or handled above
+          const fullTs = ts.includes('T') ? `${ts}:00-06:00` : `${ts}T00:00:00-06:00`;
+          normalizedForm.timestamp = new Date(fullTs).toISOString();
+        }
       }
 
       if (isNew) {
@@ -500,10 +525,10 @@ function EditPopup({ meta, entry, token, isNew, onClose, onSaved, onDelete }: Ed
                   value={String(form[f.key] ?? '')}
                   onChange={(e) => handleChange(f.key, parseFloat(e.target.value))}
                 />
-              ) : f.type === 'datetime-local' ? (
+              ) : f.type === 'datetime-local' || f.type === 'date' ? (
                 <input
                   className="edit-input"
-                  type="datetime-local"
+                  type={f.type}
                   value={String(form[f.key] ?? '')}
                   onChange={(e) => handleChange(f.key, e.target.value)}
                 />
@@ -650,10 +675,12 @@ function ListRow({ item, meta, onEdit, onUpdateStatus }: ListRowProps) {
           </span>
         </div>
         <div className="list-row-meta">
-          {meta.name !== 'gym' && meta.name !== 'finance' && !!item.timestamp && (
-            <span className="list-row-date">{fmtDate(item.timestamp)}</span>
+          {meta.name !== 'gym' && meta.name !== 'finance' && meta.name !== 'todo' && !!item.timestamp && (
+            <span className="list-row-date">
+              {meta.name === 'journal' ? fmtDateShort(item.timestamp) : fmtDate(item.timestamp)}
+            </span>
           )}
-          {meta.name !== 'journal' && !!item.timestamp && (
+          {meta.name !== 'journal' && meta.name !== 'todo' && !!item.timestamp && (
             <span className="list-row-time">{fmtTime(item.timestamp)}</span>
           )}
         </div>

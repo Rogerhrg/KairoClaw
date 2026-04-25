@@ -63,10 +63,15 @@ export const normalizeFinanceMethod = (value: unknown, type = 'gasto'): string =
 // ---------------------------------------------------------------------------
 
 export const parseDocumentTimestamp = (date?: unknown, hour?: unknown): DateTime => {
+  const now = DateTime.now().setZone(MONTERREY_TZ);
   const dateStr = typeof date === 'string' ? date : '';
   const hourStr = typeof hour === 'string' ? hour : '';
 
-  if (!dateStr) return DateTime.now().setZone(MONTERREY_TZ);
+  // If no date, or date is today and no hour, use 'now'
+  const todayStr = now.toISODate();
+  if (!dateStr || (todayStr && dateStr === todayStr && !hourStr)) {
+    return now;
+  }
 
   if (hourStr) {
     const formats = ['HH:mm', 'h:mm a', 'HH:mm:ss'];
@@ -281,7 +286,19 @@ Genera únicamente el texto de la entrada combinada resultante.
     let status = String(data.status || 'Pendiente');
     if (statusMap[status.toLowerCase()]) status = statusMap[status.toLowerCase()];
 
-    await getTodoCollection().insertOne({ ...data, title, content, status, timestamp });
+    const todoCol = getTodoCollection();
+    const existing = await todoCol.findOne({
+      title: { $regex: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      status: { $nin: ['Completada', 'completed', 'Completado'] }
+    });
+
+    if (existing) {
+      console.log(`[processDbAction] Updating existing todo: ${title}`);
+      await todoCol.updateOne({ _id: existing._id }, { $set: { status, timestamp } });
+    } else {
+      console.log(`[processDbAction] Creating new todo: ${title}`);
+      await todoCol.insertOne({ ...data, title, content, status, timestamp });
+    }
     return { ack: null, requiresConfirmation: false };
   }
 

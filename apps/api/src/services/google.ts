@@ -22,7 +22,9 @@ async function runGog(args: string[]): Promise<any> {
         ...process.env,
         GOG_KEYRING_BACKEND: 'file',
         GOG_PASSPHRASE: '',
-        GOG_KEYRING_PASSWORD: '' // Added this specifically to solve the TTY error
+        GOG_KEYRING_PASSWORD: '', // Added this specifically to solve the TTY error
+        GOG_CLIENT_ID: process.env.CLIENT_ID || '',
+        GOG_CLIENT_SECRET: process.env.CLIENT_SECRET || ''
       }
     }, (error, stdout, stderr) => {
       if (error) {

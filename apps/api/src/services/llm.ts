@@ -17,7 +17,7 @@ const callNvidiaModel = async (
   messages: Message[],
   model: string,
 ): Promise<string> => {
-  const llmUrl = process.env.NVIDIA_MOONSHOT_URL || 'https://integrate.api.nvidia.com/v1';
+  const llmUrl = 'https://integrate.api.nvidia.com/v1';
   const llmToken = process.env.NVIDIA_KEY;
   if (!llmToken) throw new Error('Missing NVIDIA_KEY');
 

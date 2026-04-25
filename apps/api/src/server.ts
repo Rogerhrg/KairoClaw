@@ -8,6 +8,7 @@ import { connectDB } from './services/db.js';
 import chatRoutes from './routes/chat.js';
 import crudRoutes from './routes/crud.js';
 import telegramRoutes from './routes/telegram.js';
+import weatherRoutes from './routes/weather.js';
 import { restoreRemindersOnBoot } from './services/reminders.js';
 import { initCronJobs } from './services/cron.js';
 
@@ -90,19 +91,24 @@ fastify.setNotFoundHandler((request, reply) => {
 fastify.register(chatRoutes);
 fastify.register(crudRoutes);
 fastify.register(telegramRoutes);
+fastify.register(weatherRoutes);
 
 // Run server
 const start = async () => {
   try {
-    await connectDB();
-    console.log("DEBUG: DB connected successfully");
-    await restoreRemindersOnBoot();
-    initCronJobs();
+    try {
+      await connectDB();
+      console.log("DEBUG: DB connected successfully");
+      await restoreRemindersOnBoot();
+      initCronJobs();
+    } catch (dbErr) {
+      console.error("DEBUG: DB connection failed, continuing without DB functionality:", dbErr);
+    }
     await fastify.listen({ port: 3000, host: '0.0.0.0' });
     console.log(`API running on http://localhost:3000`);
   } catch (err) {
     fastify.log.error(err);
-    process.exit(1);
+    // Only exit on fatal server errors, not DB errors
   }
 };
 

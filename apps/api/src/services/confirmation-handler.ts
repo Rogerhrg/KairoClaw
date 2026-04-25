@@ -40,8 +40,17 @@ export async function handlePendingConfirmation(
 
   // --- Data completion (missing hour for past entry) ---
   if (pendingConfirmation.type === 'data_completion') {
+    const text = normalizeText(userMessage);
     const originalAction = pendingConfirmation.payload.originalAction as any;
-    originalAction.data.hour = userMessage.trim();
+    
+    // If the user says "now", clear the date/hour to let the system use 'now'
+    if (text === 'ahora mismo' || text === 'ahora' || text === 'now') {
+      delete originalAction.data.date;
+      delete originalAction.data.hour;
+    } else {
+      originalAction.data.hour = userMessage.trim();
+    }
+    
     const result = await processDbAction(originalAction);
     pendingResponse = result.ack ?? 'He completado el registro.';
     await clearPendingConfirmation(pendingConfirmation._id as ObjectId);

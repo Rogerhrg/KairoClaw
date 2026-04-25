@@ -23,14 +23,15 @@ services:
     env_file:
       - .env.local
     environment:
-      - MONGO_URI=${MONGO_URI:-mongodb://db:27017/autoclaw}
-      - LLM_MODEL=${LLM_MODEL:-minimaxai/minimax-m2.7}
+      - MONGO_URI=${MONGO_URI}
       - USER_EMAIL=${USER_EMAIL}
       - USER_PASSWORD=${USER_PASSWORD}
     depends_on:
       - db
     networks:
       - autoclaw_net
+    volumes:
+      - gogcli_data:/root/.config/gogcli
 
   web:
     build:
@@ -41,7 +42,7 @@ services:
     ports:
       - "80:80"
     environment:
-      - VITE_API_URL=${VITE_API_URL:-https://autoclaw.rogeliodelarosa.com}
+      - VITE_API_URL=${VITE_API_URL}
     depends_on:
       - api
     networks:
@@ -49,6 +50,7 @@ services:
 
 volumes:
   autoclaw_mongo_data:
+  gogcli_data:
 
 networks:
   autoclaw_net:

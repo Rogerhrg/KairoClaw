@@ -200,3 +200,30 @@ export const updateSettings = async (preferredModel: string, token: string): Pro
   });
   if (!res.ok) throw new Error('API Error');
 };
+
+export interface WeatherData {
+  temp: number;
+  windSpeed: number;
+  conditionCode: number;
+  isDay: boolean;
+  time: string;
+  description: string;
+  forecast?: {
+    maxTemp: number;
+    maxTempTime: string;
+    minTemp: number;
+    minTempTime: string;
+  };
+}
+
+export const getWeather = async (token: string): Promise<WeatherData | null> => {
+  try {
+    const res = await fetch(`${API_URL}/api/weather`, {
+      headers: { 'Authorization': `Basic ${token}` }
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+};

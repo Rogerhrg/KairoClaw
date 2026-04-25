@@ -90,10 +90,10 @@ export default async function chatRoute(fastify: FastifyInstance) {
 
           if (!query && !gmailList && !gmailRead && !calendarList && !cListMatch && !wGetMatch) break;
 
-          console.log(`[LOOP ${loopCount}] Tool detected:`, { 
-            query: !!query, 
-            gmailList: !!gmailList, 
-            gmailRead: !!gmailRead, 
+          console.log(`[LOOP ${loopCount}] Tool detected:`, {
+            query: !!query,
+            gmailList: !!gmailList,
+            gmailRead: !!gmailRead,
             calendarList: !!calendarList,
             cListMatch: !!cListMatch,
             wGetMatch: !!wGetMatch
@@ -194,7 +194,8 @@ export default async function chatRoute(fastify: FastifyInstance) {
           const data = action.payload.data || {};
 
           // Ask for hour on past entries (except journal)
-          if (data.date && !data.hour && action.payload.type !== 'journal') {
+          const todayStr = DateTime.now().setZone(MONTERREY_TZ).toISODate();
+          if (todayStr && data.date && data.date < todayStr && !data.hour && action.payload.type !== 'journal') {
             const prompt = `¿A qué hora aproximadamente fue el registro del ${data.date}?`;
             await upsertPendingConfirmation({
               userId: USER_ID,
